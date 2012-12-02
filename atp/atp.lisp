@@ -1,0 +1,38 @@
+(defun resolve (kb q)
+	(setf temp-kb (cdr kb))
+	(cond ;;((eq (intern symbol-name (car kb)) '_AND)	(resolve (cdr kb) q)) 
+		((eq (intern (symbol-name (car q))) '_NOT) 	
+			(loop
+				(when (> i (length  temp-kb)) (return))
+				(cond 	((eq (intern (symbol-name (caar temp-kb))) '_NOT) (incf i))
+						(t (loop 
+							(when (< 1 (length (cadr temp-kb))) (incf i))
+							(cond 
+								((eq (intern (symbol-name (caar temp-kb))) (intern (symbol-name (caar q)))) (return (resolve kb (cdr q))))
+								(t 	(set temp-kb (cdr temp-kb)))
+							))))))) 
+
+(defun unify (x y &optional theta)
+	(cond 	((eql theta 'fail) 'fail)
+			((eql x y) theta)
+			((varp x) (unify-var x y theta))
+			((varp y) (unify-var x y theta))
+			((and (consp x) (consp y)) 
+				(unify (cdr x) (cdr y) (unify (car x) (car y) theta)))
+			(t 'fail)))
+
+(defun unify-var (var x theta)
+	(let 	((vb (assoc var theta))
+			(xb (assoc x theta))
+		(cond	(vb (unify (cdr vb) x theta))
+				(xb (unify vb (cdr x) theta))
+				((occurs-p var x theta) 'fail)
+				(t (cons (cons var x) theta))))))
+				
+(defun occurs-p (var x theta)
+	(cond	((eql var x) t)
+			((and (varp x) (assoc x theta))	
+				(occurs-p var var (cdr (assoc x theta)) theta))
+			((consp x) (or 	(occurs-p var (car x) theta)
+							(occurs-p var (cdr x) theta)))
+			(t nil)))
